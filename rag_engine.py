@@ -1,6 +1,6 @@
 from io import BytesIO
 import hashlib
-
+import os
 import chromadb
 import ollama
 from pypdf import PdfReader
@@ -15,10 +15,16 @@ CHUNK_OVERLAP = 200
 RETRIEVAL_COUNT = 5
 
 
-def get_chroma_client(database_path="./chroma_db"):
-    return chromadb.PersistentClient(
-        path=database_path
-    )
+def get_chroma_client():
+    chroma_host = os.getenv("CHROMA_HOST")
+    chroma_port= int(os.getenv("CHROMA_PORT","8000"))
+
+    return chromadb.HttpClient(
+            host=chroma_host,
+            port = chroma_port
+        )
+
+
 
 
 def create_embedding(text):

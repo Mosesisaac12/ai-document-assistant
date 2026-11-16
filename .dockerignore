@@ -1,0 +1,42 @@
+# Python environments
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Git and test artifacts
+.git/
+.github/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Local databases and uploaded documents
+chroma_db/
+chroma_db_backup/
+backups/
+documents/
+uploads/
+chat_history.json
+
+# Installer development files
+installer/
+launcher/
+deployment/
+
+# Temporary and backup files
+*.backup
+*.bak
+*.tar
+*.tar.gz
+.DS_Store
+
+# Local evaluation data
+evaluation/

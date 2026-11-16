@@ -16,3 +16,18 @@ rag_app_backup.py
 rag_app_before_refactor.py
 rag_app_working_backup.py
 .DS_Store
+# Local database backups
+backups/
+chroma_db_backup/
+# Installer and deployment development files
+installer/
+launcher/
+deployment/
+
+# Local backup copies
+*.backup
+*.bak
+*.old
+
+# Local evaluation documents and datasets
+evaluation/

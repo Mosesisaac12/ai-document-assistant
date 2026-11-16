@@ -1,3 +1,9 @@
+import os
+import subprocess
+import sys
+import time
+import urllib.request
+
 import streamlit as st
 
 from rag_engine import (
@@ -6,7 +12,6 @@ from rag_engine import (
     answer_question,
 )
 
-from evaluation import run_evaluation
 
 # ---------------------------------------------------------
 # MAIN APPLICATION FLOW
@@ -91,6 +96,99 @@ def display_header():
         "Upload a PDF and ask questions about its contents."
     )
 
+# ---------------------------------------------------------
+# EVALUATION DASHBOARD CONTROLLER
+# ---------------------------------------------------------
+
+@st.cache_resource
+def get_evaluation_process_state():
+    """Keep the evaluation process shared across Streamlit reruns."""
+    return {"process": None}
+
+
+def is_evaluation_running():
+    """Check whether the evaluation dashboard process is running."""
+
+    process = get_evaluation_process_state()["process"]
+
+    if process is None:
+        return False
+
+    return process.poll() is None
+
+
+def start_evaluation_dashboard():
+    """Start the evaluation dashboard inside this container."""
+
+    state = get_evaluation_process_state()
+
+    if is_evaluation_running():
+        return True
+
+    app_directory = os.path.dirname(os.path.abspath(__file__))
+
+    command = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        "evaluation_app.py",
+        "--server.address=0.0.0.0",
+        "--server.port=8502",
+        "--server.headless=true",
+    ]
+
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=app_directory,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+
+        state["process"] = process
+
+        for _ in range(40):
+            if process.poll() is not None:
+                return False
+
+            try:
+                urllib.request.urlopen(
+                    "http://127.0.0.1:8502/_stcore/health",
+                    timeout=1,
+                )
+                return True
+            except Exception:
+                time.sleep(0.5)
+
+        return False
+
+    except Exception:
+        return False
+
+
+def stop_evaluation_dashboard():
+    """Stop the evaluation dashboard without stopping the main app."""
+
+    state = get_evaluation_process_state()
+    process = state["process"]
+
+    if process is None or process.poll() is not None:
+        state["process"] = None
+        return True
+
+    process.terminate()
+
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+    state["process"] = None
+
+    return True
 
 # ---------------------------------------------------------
 # SIDEBAR
@@ -119,6 +217,44 @@ def display_sidebar():
         ):
             st.session_state.messages = []
             st.rerun()
+
+        st.divider()
+
+        with st.expander("🛠️ Developer Options"):
+
+            st.caption(
+                "Tools for testing and evaluating RAG performance."
+            )
+
+            if st.button(
+                "Start Evaluation Dashboard",
+                use_container_width=True,
+            ):
+
+                with st.spinner("Starting Evaluation Dashboard..."):
+
+                    started = start_evaluation_dashboard()
+
+                if started:
+                    st.success("Evaluation Dashboard is running.")
+                else:
+                    st.error("Could not start Evaluation Dashboard.")
+
+            if is_evaluation_running():
+
+                st.link_button(
+                    "Open Evaluation Dashboard",
+                    "http://localhost:8502",
+                    use_container_width=True,
+                )
+
+                if st.button(
+                    "Stop Evaluation Dashboard",
+                    use_container_width=True,
+                ):
+                    stop_evaluation_dashboard()
+                    st.success("Evaluation Dashboard stopped.")
+                    st.rerun()
 
     return uploaded_file
 
